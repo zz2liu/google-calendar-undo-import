@@ -24,9 +24,9 @@ def isImported(rec):
 def _getHead(lines):
     res = []
     for line in lines:
-        res.append(line)
         if isRecBegin(line):
             return res
+        res.append(line)
 
 def _getTail(lines):
     res = []
@@ -39,12 +39,28 @@ def _getTail(lines):
 def _getRecords(lines):
     curr = []
     for line in lines:
-        curr.append(line)
         if isRecBegin(line):
-            curr = [line]
+            curr = []
+        curr.append(line)
         if isRecEnd(line):
             yield curr
 
+def _getTail(lines):
+    res = []
+    for line in lines:
+        res.append(line)
+        if isRecEnd(line):
+            res = []
+    return res
+
+def _getRecords(lines):
+    curr = []
+    for line in lines:
+        if isRecBegin(line):
+            curr = []
+        curr.append(line)
+        if isRecEnd(line):
+            yield curr
 def parseFile(lines):
     head = _getHead(lines)
     records = _getRecords(lines)
@@ -89,6 +105,30 @@ def main(lines, outfile, errfile): #, importDate=''):
 
     # output
     writeFile(head, cleaned, tail, outfile)
+
+###############################################################
+# Next: a simplified version, tested
+def _parseRecordPlus(lines):
+    curr = []
+    for line in lines:
+        if isRecBegin(line):
+            if curr:
+                yield curr, False #header/median
+            curr = []
+        curr.append(line)
+        if isRecEnd(line):
+            yield curr, True #record: no valid check of beginning
+    if curr:
+        yield curr, False #tailer
+
+def main_new(lines, outfile=sys.stdout, errfile=sys.stderr): #, importDate=''):
+    count = 0
+    for c, is_rec in _parseRecordPlus(lines):
+        if is_rec and isImported(c):
+            count += 1
+        else:
+            outfile.writelines(c)
+    print(f'{count} records with {flagRecRemove} removed.', file=errfile)
 
 if __name__ == '__main__':
     args = sys.argv[1:]
